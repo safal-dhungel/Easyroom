@@ -1,254 +1,180 @@
-# EasyRoom — Architecture & How It Works
+# EasyRoom — Architecture & Project Guide
 
-A simple guide explaining how the app is built, how data flows, and what the database looks like.
+A clear, beginner-friendly guide explaining how EasyRoom is structured, how the frontend and backend communicate, and how the database is organized.
 
 ---
 
-## 🗂️ Project Structure
+## 🗂️ Project Directory Structure
 
 ```
 EasyRoom/
-├── backend/         ← Node.js server (handles data, talks to database)
-│   ├── server.js        ← Main entry point, starts the server
+├── backend/                  ← Node.js & Express server (API + Static File Server)
+│   ├── server.js             ← Main entry point, serves HTML pages & API routes
+│   ├── package.json          ← Backend dependencies & scripts
 │   ├── db/
-│   │   └── connection.js  ← Database connection setup
+│   │   └── connection.js     ← MySQL database connection pool (XAMPP)
 │   └── routes/
-│       ├── users.js       ← Register, Login, Profile
-│       ├── rooms.js       ← List, Add, Edit, Delete rooms
-│       ├── favorites.js   ← Save/unsave rooms
-│       └── admin.js       ← Admin-only: manage all users & rooms
+│       ├── users.js          ← User registration, login, and profile
+│       ├── rooms.js          ← Room listings (browse, add, edit, delete, status toggle)
+│       ├── favorites.js      ← Save/unsave favorite rooms
+│       └── admin.js          ← Admin controls: manage all users and rooms
 │
-├── frontend/        ← React app (what the user sees in the browser)
-│   └── src/
-│       ├── App.jsx            ← Root component, sets up all routes
-│       ├── index.css          ← All styles for the app
-│       ├── context/
-│       │   └── AuthContext.jsx  ← Global login state (who is logged in)
-│       ├── services/
-│       │   └── api.js           ← Functions that call the backend API
-│       ├── components/
-│       │   ├── Navbar.jsx             ← Top navigation bar
-│       │   ├── RoomCard.jsx           ← Card shown on home/favorites pages
-│       │   ├── ProtectedRoute.jsx     ← Blocks pages if not logged in
-│       │   └── AdminProtectedRoute.jsx ← Blocks admin pages if not admin
-│       └── pages/
-│           ├── Home.jsx         ← Browse all rooms
-│           ├── Login.jsx        ← Login form
-│           ├── Register.jsx     ← Sign up form
-│           ├── AddRoom.jsx      ← Post a new room
-│           ├── MyRooms.jsx      ← View/edit/delete your own rooms
-│           ├── RoomDetails.jsx  ← Full details of one room
-│           ├── Profile.jsx      ← View/edit your profile
-│           ├── Favorites.jsx    ← Rooms you saved
-│           ├── NotFound.jsx     ← 404 page
-│           └── admin/
-│               └── AdminDashboard.jsx  ← Admin panel
+├── frontend/                 ← HTML5, Bootstrap 5, & Vanilla JavaScript
+│   ├── index.html            ← Homepage: search & explore available rooms
+│   ├── room-details.html     ← Detailed room view: image carousel & owner contact
+│   ├── login.html            ← User & admin sign in
+│   ├── register.html         ← New user account registration
+│   ├── add-room.html         ← Post a new room with image uploads
+│   ├── my-rooms.html         ← User's dashboard: manage listings & edit modal
+│   ├── favorites.html        ← User's saved favorite rooms
+│   ├── profile.html          ← View and edit user profile
+│   ├── admin.html            ← Admin dashboard: user & room oversight
+│   ├── css/
+│   │   └── style.css         ← Clean custom styles & theme overrides
+│   └── js/
+│       └── main.js           ← Shared navbar, auth helpers, & API utilities
 │
-├── database.sql     ← SQL to set up the database tables
-└── README.md        ← Setup instructions
+├── database.sql              ← Database schema & initial admin account
+└── README.md                 ← Step-by-step setup instructions
 ```
 
 ---
 
-## 🔄 How Data Flows (Simple Example)
+## 🏗️ 3-Tier Architecture Overview
 
-**Example: User logs in**
+EasyRoom follows a standard **3-Tier Architecture**:
+
+| Tier | Component | Technology | Responsibility |
+| :--- | :--- | :--- | :--- |
+| **Presentation Tier** | Frontend | HTML5, Bootstrap 5, Vanilla JS | Displays pages, handles user interactions, and sends HTTP requests. |
+| **Application Tier** | Backend Server | Node.js + Express.js | Serves static HTML pages, processes business logic, and exposes REST API. |
+| **Data Tier** | Database | MySQL (via XAMPP) | Persistently stores users, room listings, and favorites. |
 
 ```
-Browser (React)          Backend (Node.js)           Database (MySQL)
-     │                         │                           │
-     │  POST /api/login        │                           │
-     │  { email, password }    │                           │
-     │ ─────────────────────► │                           │
-     │                         │  SELECT * FROM users      │
-     │                         │  WHERE email = ?          │
-     │                         │ ────────────────────────► │
-     │                         │                           │
-     │                         │  ◄──── Returns user row ──│
-     │                         │                           │
-     │                         │  Checks password with     │
-     │                         │  bcrypt.compare()         │
-     │                         │                           │
-     │  ◄─────────────────── { user: { id, name, email } } │
-     │                         │                           │
-     │  Saves to localStorage   │                           │
-     │  Navigates to home       │                           │
+[ Web Browser ]
+ (HTML5 + Bootstrap 5 + JS)
+       │
+       │  HTTP Requests (fetch GET/POST/PUT/DELETE)
+       ▼
+[ Express.js Server ] ── (Port 5000)
+       │
+       │  SQL Queries (mysql2/promise)
+       ▼
+[ MySQL Database ] ──── (easyroom database on XAMPP)
 ```
 
 ---
 
-## 🏗️ Architecture — 3 Layers
-
-The app follows a simple **3-layer architecture**:
-
-| Layer | What it does | Technology |
-|-------|-------------|------------|
-| **Frontend** | Shows pages, handles user clicks | React (Vite) |
-| **Backend** | Handles requests, validates data, talks to DB | Node.js + Express |
-| **Database** | Stores all data permanently | MySQL (via XAMPP) |
-
-These layers communicate like this:
+## 🔄 How Data Flows (Simple Example: User Login)
 
 ```
-User clicks button
-       ↓
-React makes HTTP request  (e.g. GET /api/rooms)
-       ↓
-Express receives request, queries the database
-       ↓
-MySQL returns data
-       ↓
-Express sends JSON response back to React
-       ↓
-React updates the screen
-```
-
----
-
-## 🔐 Authentication (How Login Works)
-
-EasyRoom uses **localStorage** to keep users logged in — no sessions or cookies.
-
-1. User fills in email + password → React sends it to `POST /api/login`
-2. Backend finds the user in the database, checks the password with **bcrypt**
-3. If correct, backend sends back user info `{ id, name, email }`
-4. React saves this to **localStorage** and to **AuthContext** (global state)
-5. The Navbar reads AuthContext to decide what links to show
-6. When user logs out, localStorage is cleared and context is reset
-
-**Admin user** is a special case — checked with a hardcoded `if` in the backend:
-```js
-if (email === 'admin@gmail.com' && password === '12345678') {
-    // return admin user object with isAdmin: true
-}
-```
-The admin gets `isAdmin: true` in their user object, which unlocks the dashboard.
-
----
-
-## 🗄️ Database Schema
-
-The database has 3 tables. Here's what each one stores:
-
-### `users` table
-Stores everyone who has registered (including the admin).
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | INT (auto) | Unique ID for each user |
-| `name` | VARCHAR | Full name |
-| `email` | VARCHAR (unique) | Email address used to log in |
-| `phone` | VARCHAR | 10-digit phone number |
-| `password` | VARCHAR | Bcrypt-hashed password (never stored as plain text) |
-
-### `rooms` table
-Stores all room listings posted by users.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | INT (auto) | Unique ID for each room |
-| `title` | VARCHAR | Room title |
-| `location` | VARCHAR | Where the room is located |
-| `price` | INT | Monthly rent in Rs. |
-| `description` | TEXT | Full description of the room |
-| `contact` | VARCHAR | Contact phone number |
-| `images` | LONGTEXT | JSON string of image data (e.g. `["base64...","base64..."]`) |
-| `status` | ENUM | Either `available` or `rented` |
-| `user_id` | INT | Links to the user who posted it (foreign key) |
-| `created_at` | TIMESTAMP | When the room was posted |
-
-### `favorites` table
-Stores which rooms each user has saved.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | INT (auto) | Unique ID |
-| `user_id` | INT | Which user saved the room |
-| `room_id` | INT | Which room was saved |
-
-> A **foreign key** means the value must match an existing row in another table.
-> For example, `user_id` in `rooms` must be a valid `id` from the `users` table.
-> If the user is deleted, their rooms are automatically deleted too (`ON DELETE CASCADE`).
-
-### Relationship Diagram
-
-```
-users ──────────< rooms        (one user can post many rooms)
-users ──────────< favorites    (one user can save many rooms)
-rooms ──────────< favorites    (one room can be saved by many users)
+Browser (login.html)             Backend (server.js)            MySQL (easyroom)
+        │                                │                              │
+   User submits form                     │                              │
+        │                                │                              │
+        │  POST /api/login               │                              │
+        │  { email, password }           │                              │
+        ├───────────────────────────────>│                              │
+        │                                │  SELECT * FROM users         │
+        │                                │  WHERE email = ?             │
+        │                                ├─────────────────────────────>│
+        │                                │                              │
+        │                                │  ◄── Returns user row ───────┤
+        │                                │                              │
+        │                                │  Compares password with      │
+        │                                │  bcrypt.compare()            │
+        │                                │                              │
+        │  ◄── Returns JSON User Data ───┤                              │
+        │                                │                              │
+   Saves user to localStorage            │                              │
+   Redirects to index.html               │                              │
 ```
 
 ---
 
-## 🌐 API Endpoints
+## 🔐 How Authentication & Sessions Work
 
-All endpoints start with `http://localhost:5000`.
+EasyRoom uses **Client-Side Storage (`localStorage`)** for session management:
 
-### User Routes (`/api`)
-| Method | URL | What it does |
-|--------|-----|-------------|
-| POST | `/api/register` | Create a new user account |
-| POST | `/api/login` | Log in and get user data |
-| GET | `/api/me/:id` | Get a user's profile |
-| PUT | `/api/me/:id` | Update a user's profile |
-
-### Room Routes (`/api`)
-| Method | URL | What it does |
-|--------|-----|-------------|
-| GET | `/api/rooms` | Get all rooms (with optional `?location=` and `?maxPrice=` filters) |
-| GET | `/api/rooms/:id` | Get one room's full details |
-| GET | `/api/my-rooms?user_id=` | Get rooms posted by a specific user |
-| POST | `/api/rooms` | Add a new room listing |
-| PUT | `/api/rooms/:id` | Edit a room (owner only) |
-| PATCH | `/api/rooms/:id/status` | Toggle available/rented (owner only) |
-| DELETE | `/api/rooms/:id` | Delete a room (owner only) |
-
-### Favorite Routes (`/api`)
-| Method | URL | What it does |
-|--------|-----|-------------|
-| POST | `/api/favorites/toggle` | Save or unsave a room |
-| GET | `/api/favorites/:user_id` | Get all rooms saved by a user |
-
-### Admin Routes (`/api/admin`)
-| Method | URL | What it does |
-|--------|-----|-------------|
-| GET | `/api/admin/users` | Get all users |
-| DELETE | `/api/admin/users/:id` | Delete a user |
-| GET | `/api/admin/rooms` | Get all rooms (with owner info) |
-| DELETE | `/api/admin/rooms/:id` | Delete any room |
+1. When a user logs in via `login.html`, the backend verifies the hashed password using **bcrypt**.
+2. On successful login, user details (`id`, `name`, `email`, `phone`) are returned to the browser.
+3. The browser stores this object in `localStorage.setItem('easyroom_user', ...)`.
+4. Across all HTML pages, `js/main.js` automatically checks `localStorage` to:
+   - Display the logged-in user's name in the navigation bar.
+   - Show links to **My Rooms**, **Post Room**, **Favorites**, and **Profile**.
+   - Show the **Admin Panel** link if the logged-in user is the admin.
+5. Clicking **Logout** clears `localStorage` and redirects the user to `login.html`.
 
 ---
 
-## 📦 Key Technologies Explained
+## 🗄️ Database Schema & Relationships
 
-| Technology | What it is | Why we use it |
-|------------|-----------|--------------|
-| **React** | JavaScript UI library | Build interactive pages without reloading |
-| **Vite** | Development tool | Fast dev server for React |
-| **React Router** | Navigation library | Handle multiple pages in a single-page app |
-| **React Context** | Built-in React feature | Share login state across all components |
-| **Node.js** | JavaScript runtime | Run JavaScript on the server |
-| **Express** | Web framework for Node | Easily define routes and handle requests |
-| **MySQL** | Database | Store data permanently in tables |
-| **mysql2** | Node.js library | Connect and query MySQL from Node |
-| **bcrypt** | Password hashing library | Securely hash passwords before storing |
-| **cors** | Express middleware | Allow the frontend (port 5173) to call the backend (port 5000) |
+The database (`easyroom`) contains 3 tables:
+
+### 1. `users` Table
+Stores registered accounts.
+- `id` (INT, Primary Key, Auto Increment)
+- `name` (VARCHAR)
+- `email` (VARCHAR, Unique)
+- `phone` (VARCHAR(10))
+- `password` (VARCHAR, Bcrypt Hash)
+
+### 2. `rooms` Table
+Stores room listings posted by users.
+- `id` (INT, Primary Key, Auto Increment)
+- `title` (VARCHAR)
+- `location` (VARCHAR)
+- `price` (INT) — monthly rent in Rs.
+- `description` (TEXT)
+- `contact` (VARCHAR(10))
+- `images` (LONGTEXT) — JSON array of image strings
+- `status` (ENUM: 'available', 'rented')
+- `user_id` (INT, Foreign Key referencing `users.id` with `ON DELETE CASCADE`)
+- `created_at` (TIMESTAMP)
+
+### 3. `favorites` Table
+Stores rooms saved by users.
+- `id` (INT, Primary Key, Auto Increment)
+- `user_id` (INT, Foreign Key referencing `users.id` with `ON DELETE CASCADE`)
+- `room_id` (INT, Foreign Key referencing `rooms.id` with `ON DELETE CASCADE`)
+- `UNIQUE KEY (user_id, room_id)` — prevents duplicate saves
 
 ---
 
-## 💡 Key Concepts for Beginners
+## 🌐 REST API Endpoints Summary
 
-**What is a REST API?**
-The backend exposes "endpoints" — URLs that do specific things. The frontend calls these URLs using `fetch()`. The backend responds with JSON data.
+### User Endpoints (`/api`)
+- `POST /api/register` — Create a new user account
+- `POST /api/login` — Sign in and verify credentials
+- `GET /api/me/:id` — Get profile data for a user
+- `PUT /api/me/:id` — Update profile data (name, email, phone)
 
-**What is bcrypt?**
-A way to scramble passwords so even if someone sees the database, they can't read the passwords. When logging in, bcrypt compares the scrambled version without ever un-scrambling it.
+### Room Endpoints (`/api`)
+- `GET /api/rooms` — Get all rooms (supports `?location=` and `?maxPrice=` filters)
+- `GET /api/rooms/:id` — Get full details for a single room
+- `GET /api/my-rooms?user_id=` — Get all rooms posted by a specific user
+- `POST /api/rooms` — Create a new room listing
+- `PUT /api/rooms/:id` — Edit an existing room listing
+- `PATCH /api/rooms/:id/status` — Toggle room status between "available" and "rented"
+- `DELETE /api/rooms/:id` — Delete a room listing
 
-**What is localStorage?**
-A place in the browser where you can save small amounts of data (like a logged-in user's info) that persists even after the page is refreshed.
+### Favorite Endpoints (`/api`)
+- `POST /api/favorites/toggle` — Save or unsave a room bookmark
+- `GET /api/favorites/:user_id` — Get all rooms saved by a user
 
-**What is React Context?**
-A way to share data (like who is logged in) with any component in the app, without having to pass it as props through every parent component.
+### Admin Endpoints (`/api/admin`)
+- `GET /api/admin/users` — List all registered users
+- `DELETE /api/admin/users/:id` — Delete a user account (admin protected)
+- `GET /api/admin/rooms` — List all rooms with owner info
+- `DELETE /api/admin/rooms/:id` — Delete any room listing
 
-**What is a Foreign Key?**
-A column in one table that references a row in another table. For example, `rooms.user_id` points to `users.id`. This ensures every room belongs to a real user.
+---
+
+## 💡 Key Terms Explained for Beginners
+
+- **HTML5**: Defines the structure of the web pages.
+- **Bootstrap 5**: CSS framework that provides responsive grid layouts, buttons, cards, modals, and forms without writing complex CSS.
+- **Vanilla JavaScript**: Standard JavaScript without external frameworks, used to fetch data and dynamically update HTML elements.
+- **Express Static**: Middleware in Express (`app.use(express.static(...))`) that allows the server to serve HTML, CSS, and JS files directly to the browser.
+- **Bcrypt**: A password hashing algorithm that securely scrambles passwords before saving them in the database.
+- **Foreign Key (`ON DELETE CASCADE`)**: Ensures relational integrity; when a user is deleted, all their posted rooms and favorites are automatically removed.

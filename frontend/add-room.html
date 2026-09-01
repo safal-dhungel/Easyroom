@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Post a Room - EasyRoom</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Bootstrap 5 CSS & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Navbar -->
+  <div id="navbarContainer"></div>
+
+  <!-- Main Container -->
+  <main class="container my-5">
+    <div class="row justify-content-center">
+      <div class="col-lg-8">
+        <div class="card p-4 p-md-5 form-card">
+          <div class="text-center mb-4">
+            <h2 class="fw-bold text-dark">Post a New Room Listing</h2>
+            <p class="text-muted">Fill out the details below to publish your rental room listing</p>
+          </div>
+
+          <!-- Alert Container -->
+          <div id="alertContainer"></div>
+
+          <form id="addRoomForm">
+            <div class="mb-3">
+              <label for="title" class="form-label">Listing Title <span class="text-danger">*</span></label>
+              <input type="text" id="title" class="form-control form-control-lg fs-6" placeholder="e.g. Spacious 1BHK Flat near Koteshwor" required>
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label for="location" class="form-label">Location / Area <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text bg-white"><i class="bi bi-geo-alt"></i></span>
+                  <input type="text" id="location" class="form-control" placeholder="e.g. Baneshwor, Kathmandu" required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label for="price" class="form-label">Monthly Rent (Rs.) <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text bg-white">Rs.</span>
+                  <input type="number" id="price" class="form-control" min="1" placeholder="e.g. 15000" required>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="contact" class="form-label">Contact Phone Number (10 Digits) <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text bg-white"><i class="bi bi-telephone"></i></span>
+                <input type="tel" id="contact" class="form-control" placeholder="98XXXXXXXX" maxlength="10" required>
+              </div>
+              <small class="text-muted">Tenants will call this number to inquire about the room</small>
+            </div>
+
+            <div class="mb-3">
+              <label for="description" class="form-label">Description & Amenities <span class="text-danger">*</span></label>
+              <textarea id="description" class="form-control" rows="4" placeholder="Describe room size, water availability, parking, balcony, rules, attached bathroom, etc." required></textarea>
+            </div>
+
+            <!-- Image Upload Section -->
+            <div class="mb-4">
+              <label class="form-label d-flex justify-content-between align-items-center">
+                <span>Room Photos <small class="text-muted">(Optional, up to 5 photos)</small></span>
+                <span id="imageCounter" class="badge bg-secondary">0 / 5</span>
+              </label>
+
+              <div class="border rounded p-3 bg-light">
+                <div class="mb-3">
+                  <input type="file" id="imageFileInput" class="form-control" accept="image/*">
+                  <small class="text-muted">Select an image file from your computer or phone</small>
+                </div>
+
+                <!-- Image Previews -->
+                <div id="imagePreviewContainer" class="d-flex flex-wrap gap-3">
+                  <!-- Previews appended here -->
+                </div>
+              </div>
+            </div>
+
+            <div class="d-flex gap-2">
+              <a href="my-rooms.html" class="btn btn-light btn-lg px-4 rounded-pill">Cancel</a>
+              <button type="submit" id="submitBtn" class="btn btn-primary btn-lg flex-grow-1 rounded-pill shadow-sm">
+                <i class="bi bi-cloud-arrow-up me-1"></i> Publish Room Listing
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <div id="footerContainer"></div>
+
+  <!-- Bootstrap 5 JS Bundle & Custom Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    let uploadedImages = [];
+    let currentUser = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      currentUser = requireAuth();
+      if (!currentUser) return;
+
+      renderNavbar('add-room');
+      renderFooter();
+
+      // Pre-fill contact with user's phone if available
+      if (currentUser.phone) {
+        document.getElementById('contact').value = currentUser.phone;
+      }
+
+      // Restrict phone input to numbers
+      const contactInput = document.getElementById('contact');
+      contactInput.addEventListener('input', () => {
+        contactInput.value = contactInput.value.replace(/\D/g, '');
+      });
+
+      // Handle Image File Input
+      document.getElementById('imageFileInput').addEventListener('change', handleImageUpload);
+
+      // Handle Form Submit
+      document.getElementById('addRoomForm').addEventListener('submit', handleAddRoom);
+    });
+
+    function handleImageUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      if (uploadedImages.length >= 5) {
+        alert('You can only upload a maximum of 5 images.');
+        e.target.value = '';
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        uploadedImages.push(event.target.result);
+        renderImagePreviews();
+        e.target.value = '';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removeImage(index) {
+      uploadedImages.splice(index, 1);
+      renderImagePreviews();
+    }
+
+    function renderImagePreviews() {
+      const container = document.getElementById('imagePreviewContainer');
+      const counter = document.getElementById('imageCounter');
+      counter.textContent = `${uploadedImages.length} / 5`;
+
+      container.innerHTML = '';
+      uploadedImages.forEach((imgSrc, idx) => {
+        const box = document.createElement('div');
+        box.className = 'preview-img-box';
+        box.innerHTML = `
+          <img src="${imgSrc}" alt="Room photo ${idx + 1}">
+          <button type="button" class="preview-remove-btn" onclick="removeImage(${idx})" title="Remove photo">&times;</button>
+        `;
+        container.appendChild(box);
+      });
+    }
+
+    async function handleAddRoom(e) {
+      e.preventDefault();
+      clearAlert();
+
+      const title = document.getElementById('title').value.trim();
+      const location = document.getElementById('location').value.trim();
+      const price = document.getElementById('price').value.trim();
+      const contact = document.getElementById('contact').value.trim();
+      const description = document.getElementById('description').value.trim();
+      const submitBtn = document.getElementById('submitBtn');
+
+      if (contact.length !== 10) {
+        showAlert('Contact number must be exactly 10 digits.', 'danger');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Publishing...';
+
+      try {
+        const payload = {
+          title,
+          location,
+          price: parseInt(price),
+          contact,
+          description,
+          images: uploadedImages,
+          user_id: currentUser.id
+        };
+
+        const res = await fetch(`${API_BASE}/rooms`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          showAlert('Room listing posted successfully! Redirecting...', 'success');
+          setTimeout(() => {
+            window.location.href = 'my-rooms.html';
+          }, 1200);
+        } else {
+          showAlert(data.error || 'Failed to publish room', 'danger');
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<i class="bi bi-cloud-arrow-up me-1"></i> Publish Room Listing';
+        }
+      } catch (err) {
+        console.error(err);
+        showAlert('Network error. Failed to connect to backend server.', 'danger');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="bi bi-cloud-arrow-up me-1"></i> Publish Room Listing';
+      }
+    }
+  </script>
+</body>
+</html>

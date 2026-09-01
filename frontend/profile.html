@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Profile - EasyRoom</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Bootstrap 5 CSS & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Navbar -->
+  <div id="navbarContainer"></div>
+
+  <!-- Main Container -->
+  <main class="container my-5">
+    <div class="row justify-content-center">
+      <div class="col-md-7 col-lg-6">
+        <div class="card p-4 p-md-5 form-card">
+          <div class="text-center mb-4">
+            <div class="bg-primary text-white d-inline-flex p-3 rounded-circle mb-3 shadow-sm" style="width: 70px; height: 70px; align-items: center; justify-content: center; font-size: 2rem;">
+              <i class="bi bi-person"></i>
+            </div>
+            <h3 class="fw-bold" id="profileHeading">My Profile</h3>
+            <p class="text-muted" id="userRoleBadge">EasyRoom Member</p>
+          </div>
+
+          <!-- Alert Container -->
+          <div id="alertContainer"></div>
+
+          <form id="profileForm">
+            <div class="mb-3">
+              <label for="name" class="form-label">Full Name</label>
+              <div class="input-group">
+                <span class="input-group-text bg-white"><i class="bi bi-person"></i></span>
+                <input type="text" id="name" class="form-control" required>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="email" class="form-label">Email Address</label>
+              <div class="input-group">
+                <span class="input-group-text bg-white"><i class="bi bi-envelope"></i></span>
+                <input type="email" id="email" class="form-control" required>
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <label for="phone" class="form-label">Phone Number (10 Digits)</label>
+              <div class="input-group">
+                <span class="input-group-text bg-white"><i class="bi bi-telephone"></i></span>
+                <input type="tel" id="phone" class="form-control" maxlength="10" placeholder="98XXXXXXXX">
+              </div>
+              <small class="text-muted">Used for prospective tenants to contact you</small>
+            </div>
+
+            <button type="submit" id="saveBtn" class="btn btn-primary btn-lg w-100 rounded-pill shadow-sm mb-3">
+              Save Changes
+            </button>
+          </form>
+
+          <div class="d-flex justify-content-between pt-3 border-top mt-2">
+            <a href="my-rooms.html" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+              <i class="bi bi-collection me-1"></i> My Listings
+            </a>
+            <button onclick="logout()" class="btn btn-outline-danger btn-sm rounded-pill px-3">
+              <i class="bi bi-box-arrow-right me-1"></i> Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <div id="footerContainer"></div>
+
+  <!-- Bootstrap 5 JS Bundle & Custom Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    let currentUser = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      currentUser = requireAuth();
+      if (!currentUser) return;
+
+      renderNavbar('profile');
+      renderFooter();
+
+      // Only allow numbers in phone
+      document.getElementById('phone').addEventListener('input', (e) => {
+        e.target.value = e.target.value.replace(/\D/g, '');
+      });
+
+      loadProfile();
+
+      document.getElementById('profileForm').addEventListener('submit', handleUpdateProfile);
+    });
+
+    async function loadProfile() {
+      if (currentUser.isAdmin) {
+        document.getElementById('name').value = currentUser.name || 'Admin';
+        document.getElementById('email').value = currentUser.email || 'admin@gmail.com';
+        document.getElementById('phone').value = currentUser.phone || '0000000000';
+        document.getElementById('userRoleBadge').textContent = 'Administrator';
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/me/${currentUser.id}`);
+        if (!res.ok) throw new Error('Failed to load profile');
+
+        const user = await res.json();
+        document.getElementById('name').value = user.name || '';
+        document.getElementById('email').value = user.email || '';
+        document.getElementById('phone').value = user.phone || '';
+      } catch (err) {
+        console.error(err);
+        showAlert('Could not load current profile details', 'danger');
+      }
+    }
+
+    async function handleUpdateProfile(e) {
+      e.preventDefault();
+      clearAlert();
+
+      if (currentUser.isAdmin) {
+        showAlert('Admin account profile cannot be edited here.', 'warning');
+        return;
+      }
+
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const saveBtn = document.getElementById('saveBtn');
+
+      if (phone && phone.length !== 10) {
+        showAlert('Phone number must be exactly 10 digits.', 'danger');
+        return;
+      }
+
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+
+      try {
+        const res = await fetch(`${API_BASE}/me/${currentUser.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, phone })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          showAlert('Profile updated successfully!', 'success');
+          // Update local storage
+          const updatedUser = { ...currentUser, name, email, phone };
+          setAuthUser(updatedUser);
+          currentUser = updatedUser;
+          renderNavbar('profile');
+        } else {
+          showAlert(data.error || 'Failed to update profile', 'danger');
+        }
+      } catch (err) {
+        console.error(err);
+        showAlert('Server connection error. Please try again.', 'danger');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = 'Save Changes';
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,13 +1,251 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EasyRoom - Find Your Perfect Room</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EasyRoom - Find Your Perfect Room</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Bootstrap 5 CSS & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Navbar -->
+  <div id="navbarContainer"></div>
+
+  <!-- Main Content -->
+  <main class="container my-4">
+    <!-- Hero Banner -->
+    <div class="hero-section text-center">
+      <h1 class="fw-bold display-5 mb-3">Find Your Ideal Room or Flat</h1>
+      <p class="lead text-light opacity-75 mb-4">Discover verified rental rooms, apartments, and flats across the city</p>
+      
+      <!-- Search & Filter Card -->
+      <div class="card p-3 p-md-4 shadow border-0 mx-auto" style="max-width: 800px; border-radius: 1rem;">
+        <form id="filterForm" class="row g-2 align-items-center">
+          <div class="col-md-5">
+            <div class="input-group">
+              <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-geo-alt"></i></span>
+              <input type="text" id="locationInput" class="form-control border-start-0" placeholder="Search by location or title...">
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="input-group">
+              <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-tag"></i></span>
+              <input type="number" id="maxPriceInput" class="form-control border-start-0" placeholder="Max Rent (Rs.)">
+            </div>
+          </div>
+          <div class="col-md-3 d-flex gap-2">
+            <button type="submit" class="btn btn-primary flex-grow-1"><i class="bi bi-search me-1"></i> Search</button>
+            <button type="button" id="resetBtn" class="btn btn-light" title="Reset Filters"><i class="bi bi-arrow-counterclockwise"></i></button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Alert Container -->
+    <div id="alertContainer"></div>
+
+    <!-- Listings Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h3 class="fw-bold mb-0">Available Listings</h3>
+        <small class="text-muted" id="resultsCount">Loading rooms...</small>
+      </div>
+    </div>
+
+    <!-- Room Cards Grid -->
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4" id="roomsGrid">
+      <!-- Dynamic Room Cards Injected Here -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="noRoomsMessage" class="text-center py-5 d-none">
+      <div class="mb-3">
+        <i class="bi bi-house-x text-muted" style="font-size: 3.5rem;"></i>
+      </div>
+      <h4 class="fw-bold text-dark">No rooms found</h4>
+      <p class="text-muted">Try adjusting your search criteria or clear your filters.</p>
+      <button class="btn btn-outline-primary mt-2" onclick="resetFilters()">View All Rooms</button>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <div id="footerContainer"></div>
+
+  <!-- Bootstrap 5 JS Bundle & Custom Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    let userFavorites = new Set();
+    const currentUser = getAuthUser();
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderNavbar('home');
+      renderFooter();
+      loadUserFavorites().then(() => {
+        fetchRooms();
+      });
+
+      // Filter submit
+      document.getElementById('filterForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const location = document.getElementById('locationInput').value.trim();
+        const maxPrice = document.getElementById('maxPriceInput').value.trim();
+        fetchRooms(location, maxPrice);
+      });
+
+      // Reset filters
+      document.getElementById('resetBtn').addEventListener('click', resetFilters);
+    });
+
+    function resetFilters() {
+      document.getElementById('locationInput').value = '';
+      document.getElementById('maxPriceInput').value = '';
+      fetchRooms();
+    }
+
+    async function loadUserFavorites() {
+      if (!currentUser) return;
+      try {
+        const res = await fetch(`${API_BASE}/favorites/${currentUser.id}`);
+        if (res.ok) {
+          const favs = await res.json();
+          favs.forEach(f => userFavorites.add(f.id));
+        }
+      } catch (err) {
+        console.error('Error loading favorites:', err);
+      }
+    }
+
+    async function fetchRooms(location = '', maxPrice = '') {
+      const grid = document.getElementById('roomsGrid');
+      const countEl = document.getElementById('resultsCount');
+      const emptyMsg = document.getElementById('noRoomsMessage');
+
+      grid.innerHTML = `
+        <div class="col-12 text-center py-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
+      `;
+      emptyMsg.classList.add('d-none');
+
+      let url = `${API_BASE}/rooms`;
+      const params = new URLSearchParams();
+      if (location) params.append('location', location);
+      if (maxPrice) params.append('maxPrice', maxPrice);
+      if (params.toString()) url += `?${params.toString()}`;
+
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Failed to fetch rooms');
+        const rooms = await res.json();
+
+        grid.innerHTML = '';
+        countEl.textContent = `Showing ${rooms.length} room${rooms.length === 1 ? '' : 's'}`;
+
+        if (rooms.length === 0) {
+          emptyMsg.classList.remove('d-none');
+          return;
+        }
+
+        rooms.forEach(room => {
+          const images = parseImages(room.images);
+          const firstImg = images.length > 0 ? images[0] : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&auto=format&fit=crop&q=60';
+          const isFav = userFavorites.has(room.id);
+          const isAvailable = room.status === 'available';
+
+          const col = document.createElement('div');
+          col.className = 'col';
+          col.innerHTML = `
+            <div class="card h-100 room-card position-relative">
+              <div class="position-relative">
+                <img src="${firstImg}" class="card-img-top room-card-img" alt="${room.title}" onerror="this.src='https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&auto=format&fit=crop&q=60'">
+                <button type="button" class="btn-fav ${isFav ? 'active' : ''}" onclick="toggleFavorite(event, ${room.id})" title="${isFav ? 'Remove from favorites' : 'Save room'}">
+                  <i class="bi ${isFav ? 'bi-heart-fill' : 'bi-heart'}"></i>
+                </button>
+                <div class="position-absolute bottom-0 start-0 m-2">
+                  <span class="${isAvailable ? 'badge-available' : 'badge-rented'}">
+                    <i class="bi ${isAvailable ? 'bi-check-circle-fill' : 'bi-x-circle-fill'} me-1"></i>${room.status.toUpperCase()}
+                  </span>
+                </div>
+              </div>
+              <div class="card-body d-flex flex-direction-column flex-column">
+                <div class="d-flex justify-content-between align-items-baseline mb-2">
+                  <h5 class="card-title fw-bold text-truncate mb-0" title="${room.title}">${room.title}</h5>
+                </div>
+                <p class="card-text text-muted small mb-2"><i class="bi bi-geo-alt-fill text-danger me-1"></i>${room.location}</p>
+                <p class="card-text text-secondary small flex-grow-1 text-truncate-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                  ${room.description || 'No description provided.'}
+                </p>
+                <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                  <div>
+                    <span class="fs-5 fw-bold text-primary">${formatPrice(room.price)}</span>
+                    <span class="text-muted small">/month</span>
+                  </div>
+                  <a href="room-details.html?id=${room.id}" class="btn btn-outline-primary btn-sm px-3 rounded-pill">
+                    Details <i class="bi bi-arrow-right ms-1"></i>
+                  </a>
+                </div>
+              </div>
+            </div>
+          `;
+          grid.appendChild(col);
+        });
+
+      } catch (err) {
+        console.error(err);
+        grid.innerHTML = '';
+        showAlert('Could not load room listings. Please make sure backend is running.', 'danger');
+      }
+    }
+
+    async function toggleFavorite(event, roomId) {
+      event.preventDefault();
+      event.stopPropagation();
+      
+      if (!currentUser) {
+        alert('Please login to save rooms to your favorites!');
+        window.location.href = 'login.html';
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/favorites/toggle`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: currentUser.id, room_id: roomId })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          const btn = event.currentTarget;
+          const icon = btn.querySelector('i');
+          if (data.isFavorited) {
+            userFavorites.add(roomId);
+            btn.classList.add('active');
+            icon.className = 'bi bi-heart-fill';
+          } else {
+            userFavorites.delete(roomId);
+            btn.classList.remove('active');
+            icon.className = 'bi bi-heart';
+          }
+        } else {
+          alert(data.error || 'Failed to update favorite');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Error connecting to server');
+      }
+    }
+  </script>
+</body>
 </html>
