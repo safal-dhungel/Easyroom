@@ -3,10 +3,10 @@ import { useParams, Link } from 'react-router-dom';
 import { getRoomById } from '../services/api';
 
 function RoomDetails() {
-  const { id } = useParams();
+  const { id } = useParams(); // get room ID from the URL e.g. /room/5
   const [room, setRoom] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [activeImageIndex, setActiveImageIndex] = useState(0); // which thumbnail is selected
 
   useEffect(() => {
     fetchRoom();
@@ -23,23 +23,22 @@ function RoomDetails() {
     }
   };
 
-  if (loading) return <div style={{ textAlign: 'center', marginTop: '3rem' }}>Loading...</div>;
-  if (!room) return <div style={{ textAlign: 'center', marginTop: '3rem' }}>Room not found.</div>;
+  if (loading) return <div style={{ textAlign: 'center', marginTop: '2rem' }}>Loading...</div>;
+  if (!room) return <div style={{ textAlign: 'center', marginTop: '2rem' }}>Room not found.</div>;
 
   const defaultImg = 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=1200';
 
-  // Parse images
+  // Parse the images JSON string into an array
   let images = [];
   try {
     if (room.images) images = JSON.parse(room.images);
   } catch { images = []; }
-  
+
   const displayImages = images.length > 0 ? images : [defaultImg];
 
   const getDaysAgo = (dateString) => {
     if (!dateString) return '';
-    const diffTime = Math.abs(new Date() - new Date(dateString));
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = Math.floor((Date.now() - new Date(dateString)) / (1000 * 60 * 60 * 24));
     if (diffDays === 0) return 'Posted today';
     if (diffDays === 1) return 'Posted 1 day ago';
     return `Posted ${diffDays} days ago`;
@@ -48,56 +47,54 @@ function RoomDetails() {
   return (
     <div className="details-container">
       <div className="details-header">
-        <Link to="/" className="btn" style={{ marginBottom: '1rem', background: '#e5e7eb' }}>&larr; Back to Listings</Link>
+        <Link to="/" className="btn btn-edit" style={{ marginBottom: '1rem', display: 'inline-block' }}>&larr; Back to Listings</Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-          <h1 style={{ color: 'var(--primary-color)', marginBottom: '0.5rem' }}>{room.title}</h1>
+          <h1 style={{ color: '#4a90e2' }}>{room.title}</h1>
           <span className={`status-badge status-${room.status || 'available'}`}>
             {room.status === 'rented' ? 'Rented' : 'Available'}
           </span>
         </div>
-        <div style={{ fontSize: '1.25rem', color: 'var(--text-muted)' }}>📍 {room.location}</div>
+        <div style={{ color: '#777', marginTop: '0.25rem' }}>📍 {room.location}</div>
       </div>
-      
-      {/* Main Image */}
+
+      {/* Main image */}
       <img src={displayImages[activeImageIndex]} alt={room.title} className="details-image" />
-      
-      {/* Thumbnails */}
+
+      {/* Thumbnail strip — only show if there are multiple images */}
       {displayImages.length > 1 && (
         <div className="image-thumbnails">
           {displayImages.map((img, index) => (
-            <img 
+            <img
               key={index}
-              src={img} 
-              alt={`${room.title} ${index + 1}`} 
+              src={img}
+              alt={`${room.title} ${index + 1}`}
               className={`thumbnail ${index === activeImageIndex ? 'thumbnail-active' : ''}`}
               onClick={() => setActiveImageIndex(index)}
             />
           ))}
         </div>
       )}
-      
+
       <div className="details-info">
-        <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--primary-color)', marginBottom: '1.5rem' }}>
-          Rs. {room.price} <span style={{fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 'normal'}}>/ month</span>
+        <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#4a90e2', marginBottom: '1.2rem' }}>
+          Rs. {room.price} <span style={{ fontSize: '1rem', color: '#777', fontWeight: 'normal' }}>/ month</span>
         </div>
-        
+
         <h3>Description</h3>
-        <p style={{ whiteSpace: 'pre-wrap', color: 'var(--text-main)' }}>{room.description}</p>
-        
+        <p style={{ whiteSpace: 'pre-wrap', color: '#333' }}>{room.description}</p>
+
         <h3>Contact Information</h3>
-        <div style={{ background: '#f3f4f6', padding: '1rem', borderRadius: '8px', display: 'inline-block' }}>
+        <div style={{ background: '#f5f5f5', padding: '1rem', borderRadius: '6px', display: 'inline-block', marginTop: '0.4rem' }}>
           {room.owner_name && (
-            <div style={{ marginBottom: '0.5rem' }}>
+            <div style={{ marginBottom: '0.4rem' }}>
               👤 <strong>Owner:</strong> {room.owner_name}
             </div>
           )}
-          <div>
-            📞 <strong>{room.contact}</strong>
-          </div>
+          <div>📞 <strong>{room.contact}</strong></div>
         </div>
-        
+
         {room.created_at && (
-          <div style={{ marginTop: '2rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+          <div style={{ marginTop: '1.5rem', color: '#999', fontSize: '0.9rem' }}>
             📅 {getDaysAgo(room.created_at)}
           </div>
         )}

@@ -22,12 +22,11 @@ function Login() {
 
     try {
       const data = await loginUser({ email, password });
-      
-      login(data.user);
+      login(data.user); // Save user to global state + localStorage
       if (data.user.isAdmin) {
-        navigate('/admin/dashboard');
+        navigate('/admin/dashboard'); // Admin goes to dashboard
       } else {
-        navigate('/');
+        navigate('/'); // Regular users go to home
       }
     } catch (err) {
       setError('Invalid email or password');
@@ -36,46 +35,50 @@ function Login() {
 
   return (
     <div className="form-container">
-      <h2 style={{ textAlign: 'center', marginBottom: '1.5rem', color: 'var(--primary-color)' }}>Login</h2>
+      <h2 style={{ textAlign: 'center', marginBottom: '1.5rem', color: '#4a90e2' }}>Login</h2>
+
       {error && <div style={{ color: 'red', marginBottom: '1rem', textAlign: 'center' }}>{error}</div>}
+
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label>Email Address</label>
-          <input 
-            type="email" 
-            className="form-control" 
-            required 
+          <input
+            type="email"
+            className="form-control"
+            required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
         </div>
+
         <div className="form-group">
           <label>Password</label>
           <div className="password-wrapper">
-            <input 
-              type={showPassword ? 'text' : 'password'} 
-              className="form-control" 
-              required 
+            <input
+              type={showPassword ? 'text' : 'password'}
+              className="form-control"
+              required
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
-            <button 
-              type="button" 
-              className="password-toggle" 
+            <button
+              type="button"
+              className="password-toggle"
               onClick={() => setShowPassword(!showPassword)}
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? '🙈' : '👁️'}
             </button>
           </div>
         </div>
+
         <button type="submit" className="btn btn-primary" style={{ width: '100%', marginBottom: '1rem' }}>
           Login
         </button>
       </form>
-      <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-        Don't have an account? <Link to="/register" style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>Register</Link>
+
+      <div style={{ textAlign: 'center' }}>
+        Don't have an account? <Link to="/register" style={{ color: '#4a90e2', fontWeight: 'bold' }}>Register</Link>
       </div>
     </div>
   );

@@ -8,27 +8,26 @@ function Home() {
   const [rooms, setRooms] = useState([]);
   const [search, setSearch] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
-  const [favorites, setFavorites] = useState([]);
+  const [favorites, setFavorites] = useState([]); // list of favorited room IDs
   const [loading, setLoading] = useState(true);
 
+  // Fetch favorites when user is logged in
   useEffect(() => {
-    if (user) {
-      fetchUserFavorites();
-    }
+    if (user) fetchUserFavorites();
   }, [user]);
 
+  // Fetch rooms whenever search or price filter changes (with a small delay)
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
+    const timer = setTimeout(() => {
       fetchRooms(search, maxPrice);
-    }, 1500);
-
-    return () => clearTimeout(delayDebounceFn);
+    }, 500); // wait 500ms after user stops typing
+    return () => clearTimeout(timer);
   }, [search, maxPrice]);
 
   const fetchUserFavorites = async () => {
     try {
       const data = await getFavorites(user.id);
-      setFavorites(data.map(f => f.id));
+      setFavorites(data.map(f => f.id)); // store just the IDs
     } catch (error) {
       console.error(error);
     }
@@ -44,10 +43,6 @@ function Home() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleSearch = (e) => {
-    e.preventDefault();
   };
 
   const handleToggleFavorite = async (room) => {
@@ -66,49 +61,47 @@ function Home() {
 
   return (
     <div>
-      <div style={{ textAlign: 'center', marginBottom: '3rem', marginTop: '2rem' }}>
-        <h1 style={{ fontSize: '3rem', marginBottom: '1rem', color: 'var(--primary-color)' }}>
-          Find Your Perfect Room
-        </h1>
-        <p style={{ fontSize: '1.25rem', color: 'var(--text-muted)' }}>
-          EasyRoom makes it simple to find and rent a room in your preferred location.
-        </p>
+      <div style={{ textAlign: 'center', marginBottom: '2rem', marginTop: '1rem' }}>
+        <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem', color: '#4a90e2' }}>Find Your Perfect Room</h1>
+        <p style={{ color: '#777' }}>Browse and rent rooms in your preferred location.</p>
       </div>
 
-      <form onSubmit={handleSearch} className="search-container">
-        <input 
-          type="text" 
-          placeholder="Search by location or title..." 
+      {/* Search filters */}
+      <form className="search-container" onSubmit={(e) => e.preventDefault()}>
+        <input
+          type="text"
+          placeholder="Search by location or title..."
           className="search-input"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <input 
-          type="number" 
-          placeholder="Max Price (Rs.)" 
+        <input
+          type="number"
+          placeholder="Max Price (Rs.)"
           className="search-input"
-          style={{ maxWidth: '150px' }}
+          style={{ maxWidth: '160px' }}
           value={maxPrice}
           onChange={(e) => setMaxPrice(e.target.value)}
         />
       </form>
 
+      {/* Room listing */}
       {loading ? (
         <div style={{ textAlign: 'center', marginTop: '2rem' }}>Loading rooms...</div>
       ) : rooms.length > 0 ? (
         <div className="rooms-grid">
           {rooms.map(room => (
-            <RoomCard 
-              key={room.id} 
-              room={room} 
+            <RoomCard
+              key={room.id}
+              room={room}
               isFavorite={favorites.includes(room.id)}
               onToggleFavorite={handleToggleFavorite}
             />
           ))}
         </div>
       ) : (
-        <div style={{ textAlign: 'center', marginTop: '3rem', color: 'var(--text-muted)' }}>
-          <h3>No rooms available.</h3>
+        <div style={{ textAlign: 'center', marginTop: '3rem', color: '#777' }}>
+          <h3>No rooms found.</h3>
         </div>
       )}
     </div>

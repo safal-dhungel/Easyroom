@@ -9,20 +9,15 @@ function Profile() {
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
 
+  // Load the user's current profile data when the page opens
   useEffect(() => {
-    if (user) {
-      fetchProfile();
-    }
+    if (user) fetchProfile();
   }, [user]);
 
   const fetchProfile = async () => {
     try {
       const data = await getUserProfile(user.id);
-      setFormData({
-        name: data.name || '',
-        email: data.email || '',
-        phone: data.phone || ''
-      });
+      setFormData({ name: data.name || '', email: data.email || '', phone: data.phone || '' });
     } catch (err) {
       setError('Failed to load profile');
     } finally {
@@ -30,11 +25,10 @@ function Profile() {
     }
   };
 
+  // Only allow numbers in phone field
   const handlePhoneChange = (e) => {
     const value = e.target.value.replace(/\D/g, '');
-    if (value.length <= 10) {
-      setFormData({ ...formData, phone: value });
-    }
+    if (value.length <= 10) setFormData({ ...formData, phone: value });
   };
 
   const handleChange = (e) => {
@@ -53,30 +47,25 @@ function Profile() {
 
     try {
       const data = await updateUserProfile(user.id, formData);
-      updateUser(data.user);
+      updateUser(data.user); // update the global auth state
       setSuccess('Profile updated successfully!');
-      setTimeout(() => setSuccess(''), 3000);
+      setTimeout(() => setSuccess(''), 3000); // clear message after 3 seconds
     } catch (err) {
       setError(err.message || 'Failed to update profile');
     }
   };
 
-  if (!user) {
-    return <div style={{ textAlign: 'center', marginTop: '3rem' }}>Please login to view your profile.</div>;
-  }
-
-  if (loading) {
-    return <div style={{ textAlign: 'center', marginTop: '3rem' }}>Loading profile...</div>;
-  }
+  if (loading) return <div style={{ textAlign: 'center', marginTop: '2rem' }}>Loading profile...</div>;
 
   return (
     <div className="form-container" style={{ maxWidth: '500px' }}>
+      {/* Avatar circle showing first letter of name */}
       <div className="profile-header">
         <div className="profile-avatar">
           {formData.name ? formData.name.charAt(0).toUpperCase() : 'U'}
         </div>
-        <h2 style={{ color: 'var(--primary-color)', marginBottom: '0.25rem' }}>My Profile</h2>
-        <p style={{ color: 'var(--text-muted)' }}>Manage your account details</p>
+        <h2 style={{ color: '#4a90e2', marginBottom: '0.25rem' }}>My Profile</h2>
+        <p style={{ color: '#777' }}>Manage your account details</p>
       </div>
 
       {success && <div className="alert-success">{success}</div>}
@@ -85,40 +74,25 @@ function Profile() {
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label>Full Name</label>
-          <input 
-            type="text" 
-            name="name"
-            className="form-control" 
-            required 
-            value={formData.name}
-            onChange={handleChange}
-          />
+          <input type="text" name="name" className="form-control" required value={formData.name} onChange={handleChange} />
         </div>
         <div className="form-group">
           <label>Email Address</label>
-          <input 
-            type="email" 
-            name="email"
-            className="form-control" 
-            required 
-            value={formData.email}
-            onChange={handleChange}
-          />
+          <input type="email" name="email" className="form-control" required value={formData.email} onChange={handleChange} />
         </div>
         <div className="form-group">
           <label>Phone Number</label>
-          <input 
+          <input
             type="text"
             name="phone"
             inputMode="numeric"
-            pattern="[0-9]*"
-            className="form-control" 
+            className="form-control"
             maxLength={10}
             placeholder="e.g. 9841234567"
             value={formData.phone}
             onChange={handlePhoneChange}
           />
-          <small style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{formData.phone.length}/10 digits</small>
+          <small style={{ color: '#777' }}>{formData.phone.length}/10 digits</small>
         </div>
         <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
           Update Profile

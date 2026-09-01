@@ -13,18 +13,23 @@ function Navbar() {
 
   return (
     <nav className="navbar">
+      {/* Left side: brand name */}
       <Link to="/" className="nav-brand">
         <h1>EasyRoom</h1>
       </Link>
+
+      {/* Right side: nav links */}
       <div className="nav-links">
         <Link to="/" className="nav-link">Home</Link>
+
         {user ? (
+          // If logged in
           <>
             {user.isAdmin ? (
-              <>
-                <Link to="/admin/dashboard" className="nav-link">Dashboard</Link>
-              </>
+              // Admin-only link
+              <Link to="/admin/dashboard" className="nav-link">Dashboard</Link>
             ) : (
+              // Regular user links
               <>
                 <Link to="/me" className="nav-link">Me</Link>
                 <Link to="/favorites" className="nav-link">Favorites</Link>
@@ -36,6 +41,7 @@ function Navbar() {
             </button>
           </>
         ) : (
+          // If not logged in
           <>
             <Link to="/login" className="nav-link">Login</Link>
             <Link to="/register" className="btn btn-primary">Sign Up</Link>
@@ -47,4 +53,3 @@ function Navbar() {
 }
 
 export default Navbar;
-

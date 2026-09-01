@@ -1,13 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AuthContext } from '../../context/AuthContext';
 import './AdminDashboard.css';
 
-const AdminDashboard = () => {
+function AdminDashboard() {
+  const { user } = useContext(AuthContext);
   const [users, setUsers] = useState([]);
   const [rooms, setRooms] = useState([]);
-  const [activeTab, setActiveTab] = useState('users');
+  const [activeTab, setActiveTab] = useState('users'); // 'users' or 'rooms'
   const navigate = useNavigate();
 
+  // Load data when the page opens
   useEffect(() => {
     fetchUsers();
     fetchRooms();
@@ -38,31 +41,29 @@ const AdminDashboard = () => {
   };
 
   const handleDeleteUser = async (id) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      try {
-        const response = await fetch(`http://localhost:5000/api/admin/users/${id}`, { method: 'DELETE' });
-        if (response.ok) {
-          fetchUsers();
-        } else {
-          const data = await response.json();
-          alert(data.error || 'Failed to delete user');
-        }
-      } catch (err) {
-        console.error('Failed to delete user', err);
+    if (!window.confirm('Are you sure you want to delete this user?')) return;
+    try {
+      const response = await fetch(`http://localhost:5000/api/admin/users/${id}`, { method: 'DELETE' });
+      if (response.ok) {
+        fetchUsers(); // refresh the list
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Failed to delete user');
       }
+    } catch (err) {
+      console.error('Failed to delete user', err);
     }
   };
 
   const handleDeleteRoom = async (id) => {
-    if (window.confirm('Are you sure you want to delete this room?')) {
-      try {
-        const response = await fetch(`http://localhost:5000/api/admin/rooms/${id}`, { method: 'DELETE' });
-        if (response.ok) {
-          fetchRooms();
-        }
-      } catch (err) {
-        console.error('Failed to delete room', err);
+    if (!window.confirm('Are you sure you want to delete this room?')) return;
+    try {
+      const response = await fetch(`http://localhost:5000/api/admin/rooms/${id}`, { method: 'DELETE' });
+      if (response.ok) {
+        fetchRooms(); // refresh the list
       }
+    } catch (err) {
+      console.error('Failed to delete room', err);
     }
   };
 
@@ -70,27 +71,29 @@ const AdminDashboard = () => {
     <div className="admin-dashboard">
       <div className="admin-header">
         <h1>Admin Dashboard</h1>
+        <span style={{ color: '#777', fontSize: '0.9rem' }}>Logged in as: {user?.name}</span>
       </div>
 
+      {/* Tab buttons to switch between Users and Rooms */}
       <div className="admin-tabs">
-        <button 
-          className={activeTab === 'users' ? 'active' : ''} 
+        <button
+          className={activeTab === 'users' ? 'active' : ''}
           onClick={() => setActiveTab('users')}
         >
-          Manage Users
+          Manage Users ({users.length})
         </button>
-        <button 
-          className={activeTab === 'rooms' ? 'active' : ''} 
+        <button
+          className={activeTab === 'rooms' ? 'active' : ''}
           onClick={() => setActiveTab('rooms')}
         >
-          Manage Rooms
+          Manage Rooms ({rooms.length})
         </button>
       </div>
 
       <div className="admin-content">
+        {/* USERS TABLE */}
         {activeTab === 'users' && (
           <div className="admin-table-container">
-            <h2>Users ({users.length})</h2>
             <table className="admin-table">
               <thead>
                 <tr>
@@ -98,18 +101,18 @@ const AdminDashboard = () => {
                   <th>Name</th>
                   <th>Email</th>
                   <th>Phone</th>
-                  <th>Actions</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {users.map(user => (
-                  <tr key={user.id}>
-                    <td>{user.id}</td>
-                    <td>{user.name}</td>
-                    <td>{user.email}</td>
-                    <td>{user.phone}</td>
+                {users.map(u => (
+                  <tr key={u.id}>
+                    <td>{u.id}</td>
+                    <td>{u.name}</td>
+                    <td>{u.email}</td>
+                    <td>{u.phone}</td>
                     <td>
-                      <button onClick={() => handleDeleteUser(user.id)} className="btn-delete">Delete</button>
+                      <button onClick={() => handleDeleteUser(u.id)} className="btn-delete">Delete</button>
                     </td>
                   </tr>
                 ))}
@@ -118,9 +121,9 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* ROOMS TABLE */}
         {activeTab === 'rooms' && (
           <div className="admin-table-container">
-            <h2>Rooms ({rooms.length})</h2>
             <table className="admin-table">
               <thead>
                 <tr>
@@ -130,7 +133,7 @@ const AdminDashboard = () => {
                   <th>Price</th>
                   <th>Status</th>
                   <th>Owner</th>
-                  <th>Actions</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -141,7 +144,7 @@ const AdminDashboard = () => {
                     <td>{room.location}</td>
                     <td>Rs. {room.price}</td>
                     <td>{room.status}</td>
-                    <td>{room.owner_name || <span style={{color:'#aaa'}}>N/A</span>}</td>
+                    <td>{room.owner_name || <span style={{ color: '#aaa' }}>N/A</span>}</td>
                     <td>
                       <button onClick={() => handleDeleteRoom(room.id)} className="btn-delete">Delete</button>
                     </td>
@@ -154,6 +157,6 @@ const AdminDashboard = () => {
       </div>
     </div>
   );
-};
+}
 
 export default AdminDashboard;
