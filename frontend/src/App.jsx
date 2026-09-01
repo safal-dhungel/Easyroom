@@ -12,8 +12,8 @@ import Profile from './pages/Profile';
 import Favorites from './pages/Favorites';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminProtectedRoute from './components/AdminProtectedRoute';
-import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import NotFound from './pages/NotFound';
 import { checkServerConnection } from './services/api';
 import './index.css';
 
@@ -66,8 +66,8 @@ function App() {
               <Route path="/my-rooms" element={<ProtectedRoute><MyRooms /></ProtectedRoute>} />
               <Route path="/me" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
-              <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin/dashboard" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
         </div>

@@ -20,10 +20,20 @@ function Navbar() {
         <Link to="/" className="nav-link">Home</Link>
         {user ? (
           <>
-            <Link to="/me" className="nav-link">Me</Link>
-            <Link to="/favorites" className="nav-link">Favorites</Link>
-            <Link to="/my-rooms" className="nav-link">My Rooms</Link>
-            <button onClick={handleLogout} className="btn btn-danger">Logout ({user.name})</button>
+            {user.isAdmin ? (
+              <>
+                <Link to="/admin/dashboard" className="nav-link">Dashboard</Link>
+              </>
+            ) : (
+              <>
+                <Link to="/me" className="nav-link">Me</Link>
+                <Link to="/favorites" className="nav-link">Favorites</Link>
+                <Link to="/my-rooms" className="nav-link">My Rooms</Link>
+              </>
+            )}
+            <button onClick={handleLogout} className="btn btn-danger">
+              Logout ({user.name})
+            </button>
           </>
         ) : (
           <>
@@ -37,3 +47,4 @@ function Navbar() {
 }
 
 export default Navbar;
+

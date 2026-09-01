@@ -3,36 +3,6 @@ const router = express.Router();
 const pool = require('../db/connection');
 const bcrypt = require('bcrypt');
 
-// Admin Login
-router.post('/login', async (req, res) => {
-    try {
-        const { username, password } = req.body;
-        const [admins] = await pool.query(
-            'SELECT * FROM admins WHERE username = ?',
-            [username]
-        );
-        
-        if (admins.length > 0) {
-            const admin = admins[0];
-            const isMatch = await bcrypt.compare(password, admin.password);
-            if (isMatch) {
-                // In a real app, you would issue a JWT token here
-                res.status(200).json({
-                    message: 'Admin login successful',
-                    admin: { id: admin.id, username: admin.username }
-                });
-            } else {
-                res.status(401).json({ error: 'Invalid credentials' });
-            }
-        } else {
-            res.status(401).json({ error: 'Invalid credentials' });
-        }
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Failed to login' });
-    }
-});
-
 // --- USERS MANAGEMENT ---
 
 // Get all users
@@ -56,7 +26,7 @@ router.put('/users/:id', async (req, res) => {
             'UPDATE users SET name = ?, email = ?, phone = ? WHERE id = ?',
             [name, email, phone || null, id]
         );
-        
+
         res.status(200).json({ message: 'User updated successfully' });
     } catch (error) {
         console.error(error);
@@ -68,6 +38,13 @@ router.put('/users/:id', async (req, res) => {
 router.delete('/users/:id', async (req, res) => {
     try {
         const { id } = req.params;
+
+        // Prevent deleting the admin account
+        const [rows] = await pool.query('SELECT email FROM users WHERE id = ?', [id]);
+        if (rows.length > 0 && rows[0].email === 'admin@gmail.com') {
+            return res.status(403).json({ error: 'Cannot delete the admin account' });
+        }
+
         await pool.query('DELETE FROM users WHERE id = ?', [id]);
         res.status(200).json({ message: 'User deleted successfully' });
     } catch (error) {
@@ -78,10 +55,15 @@ router.delete('/users/:id', async (req, res) => {
 
 // --- ROOMS MANAGEMENT ---
 
-// Get all rooms
+// Get all rooms (with owner info)
 router.get('/rooms', async (req, res) => {
     try {
-        const [rooms] = await pool.query('SELECT * FROM rooms ORDER BY created_at DESC');
+        const [rooms] = await pool.query(`
+            SELECT r.*, u.name AS owner_name, u.email AS owner_email
+            FROM rooms r
+            LEFT JOIN users u ON r.user_id = u.id
+            ORDER BY r.created_at DESC
+        `);
         res.status(200).json(rooms);
     } catch (error) {
         console.error(error);
@@ -99,7 +81,7 @@ router.put('/rooms/:id', async (req, res) => {
             'UPDATE rooms SET title=?, location=?, price=?, description=?, contact=?, status=? WHERE id=?',
             [title, location, price, description, contact, status, id]
         );
-        
+
         res.status(200).json({ message: 'Room updated successfully' });
     } catch (error) {
         console.error(error);

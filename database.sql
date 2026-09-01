@@ -36,12 +36,8 @@ CREATE TABLE IF NOT EXISTS favorites (
     UNIQUE KEY unique_favorite (user_id, room_id)
 );
 
--- Admins Table
-CREATE TABLE IF NOT EXISTS admins (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    username VARCHAR(255) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL
-);
+-- Insert Admin User (email: admin@gmail.com, password: 12345678)
+INSERT IGNORE INTO users (name, email, phone, password)
+VALUES ('Admin', 'admin@gmail.com', '0000000000', '$2b$10$eXM5d785qm8qIe6BujlMiOG0IyzbxMx0xJm5r.24jW9LJjlQfioQ.');
 
--- Seed initial admin user (username: admin, password: pass123)
-INSERT IGNORE INTO admins (username, password) VALUES ('admin', '$2b$10$TOXEfJuuXtt6c7UIcYkJweevarJ9Z2X57y2SlaJlpXVr6yeK.apQ6');
+

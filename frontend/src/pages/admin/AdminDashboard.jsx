@@ -43,6 +43,9 @@ const AdminDashboard = () => {
         const response = await fetch(`http://localhost:5000/api/admin/users/${id}`, { method: 'DELETE' });
         if (response.ok) {
           fetchUsers();
+        } else {
+          const data = await response.json();
+          alert(data.error || 'Failed to delete user');
         }
       } catch (err) {
         console.error('Failed to delete user', err);
@@ -63,16 +66,10 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('adminUser');
-    navigate('/admin/login');
-  };
-
   return (
     <div className="admin-dashboard">
       <div className="admin-header">
         <h1>Admin Dashboard</h1>
-        <button onClick={handleLogout} className="admin-logout-btn">Logout</button>
       </div>
 
       <div className="admin-tabs">
@@ -132,6 +129,7 @@ const AdminDashboard = () => {
                   <th>Location</th>
                   <th>Price</th>
                   <th>Status</th>
+                  <th>Owner</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -141,8 +139,9 @@ const AdminDashboard = () => {
                     <td>{room.id}</td>
                     <td>{room.title}</td>
                     <td>{room.location}</td>
-                    <td>${room.price}</td>
+                    <td>Rs. {room.price}</td>
                     <td>{room.status}</td>
+                    <td>{room.owner_name || <span style={{color:'#aaa'}}>N/A</span>}</td>
                     <td>
                       <button onClick={() => handleDeleteRoom(room.id)} className="btn-delete">Delete</button>
                     </td>

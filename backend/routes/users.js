@@ -39,6 +39,15 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
+        
+        // Admin hardcoded check
+        if (email === 'admin@gmail.com' && password === '12345678') {
+            return res.status(200).json({
+                message: 'Admin login successful',
+                user: { id: 0, name: 'Admin', email: 'admin@gmail.com', isAdmin: true }
+            });
+        }
+
         const [users] = await pool.query(
             'SELECT * FROM users WHERE email = ?',
             [email]

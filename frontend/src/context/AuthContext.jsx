@@ -6,9 +6,22 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
 
     useEffect(() => {
+        // Clear any stale admin session from the old system
+        localStorage.removeItem('adminUser');
+
         const storedUser = localStorage.getItem('easyroom_user');
         if (storedUser) {
-            setUser(JSON.parse(storedUser));
+            try {
+                const parsed = JSON.parse(storedUser);
+                if (parsed && typeof parsed === 'object') {
+                    setUser(parsed);
+                } else {
+                    localStorage.removeItem('easyroom_user');
+                }
+            } catch {
+                // Corrupted value (e.g. literal "undefined") — clear it
+                localStorage.removeItem('easyroom_user');
+            }
         }
     }, []);
 

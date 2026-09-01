@@ -73,16 +73,9 @@ CREATE TABLE IF NOT EXISTS favorites (
     FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
     UNIQUE KEY unique_favorite (user_id, room_id)
 );
-
--- Admins Table
-CREATE TABLE IF NOT EXISTS admins (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    username VARCHAR(255) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL
-);
-
--- Seed initial admin user (username: admin, password: pass123)
-INSERT IGNORE INTO admins (username, password) VALUES ('admin', '$2b$10$TOXEfJuuXtt6c7UIcYkJweevarJ9Z2X57y2SlaJlpXVr6yeK.apQ6');
+-- Insert Admin User (email: admin@gmail.com, password: 12345678)
+INSERT IGNORE INTO users (name, email, phone, password)
+VALUES ('Admin', 'admin@gmail.com', '0000000000', '$2b$10$eXM5d785qm8qIe6BujlMiOG0IyzbxMx0xJm5r.24jW9LJjlQfioQ.');
 ```
 *Note: If you encounter issues, ensure your XAMPP MySQL server is running on the default port (3306) with user `root` and an empty password.*
 
@@ -137,5 +130,5 @@ INSERT IGNORE INTO admins (username, password) VALUES ('admin', '$2b$10$TOXEfJuu
 - **View Rooms**: A clean, responsive card layout showing all available rooms with status badges.
 - **Room Details**: Detailed view with image gallery (thumbnails) and status badge.
 - **Search**: Text-based filtering by location on the homepage.
-- **Admin Panel**: Secure dashboard accessible via `/admin/login` (Username: `admin`, Password: `pass123`). Admin can view, edit, and delete any users and rooms. Public sign-up/login for admin is strictly disabled.
+- **Admin Panel**: Accessible from the main Login page using Email: `admin@gmail.com` and Password: `12345678`. Admin can view and delete any users and rooms from the dashboard.
 - **Modern UI**: Clean design system with dynamic hovers, shadows, modals, animations, and intuitive layout built strictly with Vanilla CSS.

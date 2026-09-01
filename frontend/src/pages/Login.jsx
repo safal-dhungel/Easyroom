@@ -22,8 +22,13 @@ function Login() {
 
     try {
       const data = await loginUser({ email, password });
+      
       login(data.user);
-      navigate('/');
+      if (data.user.isAdmin) {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       setError('Invalid email or password');
     }
