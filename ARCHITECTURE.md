@@ -29,8 +29,6 @@ EasyRoom/
 │   ├── favorites.html        ← User's saved favorite rooms
 │   ├── profile.html          ← View and edit user profile
 │   ├── admin.html            ← Admin dashboard: user & room oversight
-│   ├── css/
-│   │   └── style.css         ← Clean custom styles & theme overrides
 │   └── js/
 │       └── main.js           ← Shared navbar, auth helpers, & API utilities
 │
