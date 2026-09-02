@@ -69,7 +69,7 @@ function renderNavbar(activePage = '') {
   if (!navContainer) return;
 
   const linkStyle = 'font-weight: 500;';
-  const activeLinkStyle = 'font-weight: 600; color: #2563eb !important;';
+  const activeLinkStyle = 'font-weight: 600; color: #111111 !important;';
 
   let authNavItems = '';
 
