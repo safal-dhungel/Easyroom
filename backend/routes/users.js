@@ -11,7 +11,7 @@ const bcrypt = require('bcrypt');
 // Creates a new user account
 router.post('/register', async (req, res) => {
     try {
-        const { name, email, phone, password } = req.body;
+        const { name, email, phone, password } = req.body || {};
 
         // Validate password length
         if (!password || password.length < 8) {
@@ -48,7 +48,7 @@ router.post('/register', async (req, res) => {
 // Checks credentials and returns user data if correct
 router.post('/login', async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password } = req.body || {};
 
         // Special hardcoded check for the admin account
         if (email === 'admin@gmail.com' && password === '12345678') {

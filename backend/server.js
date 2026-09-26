@@ -9,7 +9,7 @@ const favoriteRoutes = require('./routes/favorites');
 const adminRoutes = require('./routes/admin');
 
 const app = express();
-const PORT = 5000;
+const PORT = 5000;  
 
 // Middleware
 app.use(cors());                                                   // Allow requests from any origin
