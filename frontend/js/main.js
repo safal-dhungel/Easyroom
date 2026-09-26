@@ -86,6 +86,11 @@ function renderNavbar(activePage = '') {
         </a>
       </li>
       <li class="nav-item">
+        <a class="nav-link ${activePage === 'appointments' ? 'active' : ''}" style="${activePage === 'appointments' ? activeLinkStyle : linkStyle}" href="appointments.html">
+          <i class="bi bi-calendar-check me-1"></i> Appointments
+        </a>
+      </li>
+      <li class="nav-item">
         <a class="nav-link btn btn-outline-primary btn-sm ms-lg-2 px-3 ${activePage === 'add-room' ? 'active' : ''}" style="${activePage === 'add-room' ? activeLinkStyle : linkStyle}" href="add-room.html">
           <i class="bi bi-plus-circle me-1"></i> Post Room
         </a>

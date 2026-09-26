@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Appointments - EasyRoom</title>
+  <meta name="description" content="View and manage your room visit appointments on EasyRoom.">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Bootstrap 5 CSS & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      background-color: #f8fafc;
+      color: #334155;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    main { flex: 1; }
+    .appt-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 0.875rem;
+      background: #fff;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .appt-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+    }
+    .badge-pending  { background-color:#fffbeb; color:#92400e; border:1px solid #fde68a; }
+    .badge-accepted { background-color:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; }
+    .badge-rejected { background-color:#fef2f2; color:#991b1b; border:1px solid #fecaca; }
+    .status-badge {
+      font-size: 0.78rem; font-weight: 600;
+      padding: 0.3rem 0.65rem; border-radius: 9999px; display: inline-block;
+    }
+    .tab-btn {
+      border: none; background: none; padding: 0.6rem 1.5rem;
+      border-bottom: 2px solid transparent; font-weight: 600; color: #64748b;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .tab-btn.active {
+      color: #2563eb; border-bottom-color: #2563eb;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <div id="navbarContainer"></div>
+
+  <!-- Main Container -->
+  <main class="container my-5">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+      <div>
+        <h2 class="fw-bold mb-1" style="color: #0f172a;"><i class="bi bi-calendar-check-fill me-2 text-primary"></i>My Appointments</h2>
+        <p class="text-muted mb-0">Manage your room visit requests and incoming bookings</p>
+      </div>
+      <a href="index.html" class="btn btn-outline-primary rounded-pill px-4">
+        <i class="bi bi-search me-1"></i> Browse Rooms
+      </a>
+    </div>
+
+    <!-- Alert Container -->
+    <div id="alertContainer"></div>
+
+    <!-- Tabs -->
+    <div class="border-bottom mb-4 d-flex gap-2">
+      <button class="tab-btn active" id="tabBuyer" onclick="switchTab('buyer')">
+        <i class="bi bi-person-check me-1"></i> My Requests
+      </button>
+      <button class="tab-btn" id="tabSeller" onclick="switchTab('seller')">
+        <i class="bi bi-house-door me-1"></i> Received (My Rooms)
+      </button>
+    </div>
+
+    <!-- Notifications Banner -->
+    <div id="notifBanner"></div>
+
+    <!-- Appointments Grid -->
+    <div id="appointmentsContainer">
+      <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <div id="footerContainer"></div>
+
+  <!-- Bootstrap 5 JS Bundle & Custom Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    let currentUser = null;
+    let currentTab = 'buyer';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      currentUser = requireAuth();
+      if (!currentUser) return;
+
+      renderNavbar('appointments');
+      renderFooter();
+      loadNotifications();
+      loadAppointments('buyer');
+    });
+
+    function switchTab(tab) {
+      currentTab = tab;
+      document.getElementById('tabBuyer').classList.toggle('active', tab === 'buyer');
+      document.getElementById('tabSeller').classList.toggle('active', tab === 'seller');
+      loadAppointments(tab);
+    }
+
+    async function loadNotifications() {
+      if (!currentUser || currentUser.isAdmin) return;
+      try {
+        const res = await fetch(`${API_BASE}/notifications/${currentUser.id}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.unreadCount > 0) {
+          document.getElementById('notifBanner').innerHTML = `
+            <div class="alert alert-info d-flex justify-content-between align-items-center mb-4">
+              <div><i class="bi bi-bell-fill me-2"></i>You have <strong>${data.unreadCount}</strong> unread notification${data.unreadCount > 1 ? 's' : ''}.</div>
+              <button class="btn btn-sm btn-outline-info rounded-pill" onclick="markAllRead()">Mark all as read</button>
+            </div>
+            <div id="notifList" class="mb-4">
+              ${data.notifications.filter(n => !n.is_read).map(n => `
+                <div class="alert alert-light py-2 px-3 d-flex justify-content-between align-items-start gap-2 mb-2" style="border-left: 3px solid #2563eb;">
+                  <div>
+                    <small class="text-muted">${new Date(n.created_at).toLocaleString()}</small>
+                    <p class="mb-0 small">${n.message}</p>
+                  </div>
+                  <button class="btn btn-sm btn-link text-muted p-0" style="white-space:nowrap;" onclick="markRead(${n.id}, this)">Dismiss</button>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        }
+      } catch (err) {
+        console.error('Failed to load notifications:', err);
+      }
+    }
+
+    async function markAllRead() {
+      try {
+        await fetch(`${API_BASE}/notifications/read-all/${currentUser.id}`, { method: 'PATCH' });
+        document.getElementById('notifBanner').innerHTML = '';
+      } catch (err) { console.error(err); }
+    }
+
+    async function markRead(notifId, btn) {
+      try {
+        await fetch(`${API_BASE}/notifications/${notifId}/read`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: currentUser.id })
+        });
+        btn.closest('.alert').remove();
+      } catch (err) { console.error(err); }
+    }
+
+    async function loadAppointments(role) {
+      const container = document.getElementById('appointmentsContainer');
+      container.innerHTML = `
+        <div class="text-center py-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
+      `;
+
+      try {
+        const res = await fetch(`${API_BASE}/appointments?user_id=${currentUser.id}&role=${role}`);
+        if (!res.ok) throw new Error('Failed to load appointments');
+        const appointments = await res.json();
+
+        if (appointments.length === 0) {
+          container.innerHTML = `
+            <div class="text-center py-5">
+              <i class="bi bi-calendar-x text-muted" style="font-size: 3.5rem;"></i>
+              <h4 class="fw-bold mt-3" style="color: #0f172a;">No appointments yet</h4>
+              <p class="text-muted">${role === 'buyer' ? 'Browse rooms and request a visit appointment.' : 'When buyers request visits to your rooms, they will appear here.'}</p>
+              ${role === 'buyer' ? '<a href="index.html" class="btn btn-primary mt-2 rounded-pill px-4" style="background-color:#2563eb;border-color:#2563eb;">Browse Rooms</a>' : ''}
+            </div>
+          `;
+          return;
+        }
+
+        const cards = appointments.map(appt => buildCard(appt, role)).join('');
+        container.innerHTML = `<div class="row g-4">${cards}</div>`;
+
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = '<div class="alert alert-danger">Could not load appointments. Please check server.</div>';
+      }
+    }
+
+    function buildCard(appt, role) {
+      const statusClass = { pending: 'badge-pending', accepted: 'badge-accepted', rejected: 'badge-rejected' }[appt.status] || '';
+      const statusIcon  = { pending: 'bi-hourglass-split', accepted: 'bi-check-circle-fill', rejected: 'bi-x-circle-fill' }[appt.status] || '';
+
+      const visitDate = new Date(appt.visit_date).toLocaleDateString('en-US', { weekday:'short', year:'numeric', month:'short', day:'numeric' });
+      const visitTime = appt.visit_time ? appt.visit_time.substring(0, 5) : '';
+
+      let actionsHtml = '';
+      if (role === 'seller' && appt.status === 'pending') {
+        actionsHtml = `
+          <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-success btn-sm rounded-pill flex-grow-1" onclick="updateStatus(${appt.id}, 'accepted')">
+              <i class="bi bi-check2 me-1"></i> Accept
+            </button>
+            <button class="btn btn-danger btn-sm rounded-pill flex-grow-1" onclick="updateStatus(${appt.id}, 'rejected')">
+              <i class="bi bi-x me-1"></i> Reject
+            </button>
+          </div>
+        `;
+      } else if (role === 'buyer' && appt.status === 'pending') {
+        actionsHtml = `
+          <div class="mt-3">
+            <button class="btn btn-outline-danger btn-sm rounded-pill w-100" onclick="cancelAppointment(${appt.id})">
+              <i class="bi bi-trash me-1"></i> Cancel Request
+            </button>
+          </div>
+        `;
+      }
+
+      const personLabel = role === 'buyer' ? 'Owner' : 'Buyer';
+      const personName  = role === 'buyer' ? (appt.seller_name || 'N/A') : (appt.buyer_name || 'N/A');
+      const personPhone = role === 'buyer' ? (appt.seller_phone || '') : (appt.buyer_phone || '');
+
+      return `
+        <div class="col-md-6 col-lg-4" id="appt-${appt.id}">
+          <div class="appt-card h-100 p-4">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <div>
+                <h6 class="fw-bold mb-0 text-truncate" style="max-width: 190px;" title="${appt.room_title}">${appt.room_title}</h6>
+                <small class="text-muted"><i class="bi bi-geo-alt me-1"></i>${appt.room_location}</small>
+              </div>
+              <span class="status-badge ${statusClass}">
+                <i class="bi ${statusIcon} me-1"></i>${appt.status.charAt(0).toUpperCase() + appt.status.slice(1)}
+              </span>
+            </div>
+
+            <div class="mb-2 p-3 rounded-3" style="background:#f1f5f9;">
+              <div class="d-flex align-items-center mb-1">
+                <i class="bi bi-calendar3 me-2 text-primary"></i>
+                <span class="small fw-semibold">${visitDate}</span>
+              </div>
+              <div class="d-flex align-items-center">
+                <i class="bi bi-clock me-2 text-primary"></i>
+                <span class="small fw-semibold">${visitTime}</span>
+              </div>
+            </div>
+
+            ${appt.message ? `<p class="small text-secondary mb-2"><i class="bi bi-chat-left-text me-1"></i><em>"${appt.message}"</em></p>` : ''}
+
+            <div class="d-flex align-items-center gap-2 mt-2">
+              <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:32px;height:32px;background:#dbeafe;color:#2563eb;">
+                <i class="bi bi-person-fill" style="font-size:0.85rem;"></i>
+              </div>
+              <div>
+                <div class="small fw-semibold">${personLabel}: ${personName}</div>
+                ${personPhone ? `<div class="small text-muted">${personPhone}</div>` : ''}
+              </div>
+            </div>
+
+            ${actionsHtml}
+
+            <div class="mt-2 pt-2" style="border-top:1px solid #e2e8f0;">
+              <small class="text-muted">Requested: ${new Date(appt.created_at).toLocaleDateString()}</small>
+              <a href="room-details.html?id=${appt.room_id}" class="btn btn-link btn-sm p-0 float-end" style="font-size:0.78rem;">View Room</a>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function updateStatus(apptId, status) {
+      try {
+        const res = await fetch(`${API_BASE}/appointments/${apptId}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status, user_id: currentUser.id })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          loadAppointments('seller');
+        } else {
+          alert(data.error || 'Failed to update status');
+        }
+      } catch (err) {
+        alert('Server error occurred');
+      }
+    }
+
+    async function cancelAppointment(apptId) {
+      if (!confirm('Are you sure you want to cancel this appointment request?')) return;
+      try {
+        const res = await fetch(`${API_BASE}/appointments/${apptId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: currentUser.id })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          const card = document.getElementById(`appt-${apptId}`);
+          if (card) card.remove();
+        } else {
+          alert(data.error || 'Failed to cancel appointment');
+        }
+      } catch (err) {
+        alert('Server error occurred');
+      }
+    }
+  </script>
+</body>
+</html>

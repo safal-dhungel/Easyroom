@@ -234,7 +234,12 @@
       try {
         const res = await fetch(url);
         if (!res.ok) throw new Error('Failed to fetch rooms');
-        const rooms = await res.json();
+        let rooms = await res.json();
+
+        // Filter out the user's own rooms
+        if (currentUser && !currentUser.isAdmin) {
+          rooms = rooms.filter(room => room.user_id != currentUser.id);
+        }
 
         grid.innerHTML = '';
         countEl.textContent = `Showing ${rooms.length} room${rooms.length === 1 ? '' : 's'}`;
@@ -299,9 +304,11 @@
       event.preventDefault();
       event.stopPropagation();
       
-      if (!currentUser) {
-        alert('Please login to save rooms to your favorites!');
-        window.location.href = 'login.html';
+      const btn = event.currentTarget;
+      
+      if (!currentUser || currentUser.isAdmin) {
+        alert('Please login as a regular user to save rooms to your favorites!');
+        if (!currentUser) window.location.href = 'login.html';
         return;
       }
 
@@ -314,7 +321,6 @@
 
         const data = await res.json();
         if (res.ok) {
-          const btn = event.currentTarget;
           const icon = btn.querySelector('i');
           if (data.isFavorited) {
             userFavorites.add(roomId);

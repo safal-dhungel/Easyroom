@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Room Details - EasyRoom</title>
+  <meta name="description" content="View full details, photos, price and contact information for this room listing on EasyRoom.">
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -50,6 +51,7 @@
     const roomId = urlParams.get('id');
     const currentUser = getAuthUser();
     let isFavorited = false;
+    let roomData = null;
 
     document.addEventListener('DOMContentLoaded', () => {
       renderNavbar();
@@ -66,15 +68,20 @@
 
     async function loadRoomDetails() {
       try {
-        // Fetch room data
-        const res = await fetch(`${API_BASE}/rooms/${roomId}`);
+        // Fetch room data (pass viewer_id to track unique views)
+        const fetchUrl = currentUser && !currentUser.isAdmin 
+          ? `${API_BASE}/rooms/${roomId}?viewer_id=${currentUser.id}` 
+          : `${API_BASE}/rooms/${roomId}`;
+        
+        const res = await fetch(fetchUrl);
         if (!res.ok) {
           throw new Error('Room not found or server error');
         }
         const room = await res.json();
+        roomData = room;
 
-        // Check favorite status if logged in
-        if (currentUser) {
+        // Check favorite status — only for logged-in non-admin users
+        if (currentUser && !currentUser.isAdmin) {
           const favRes = await fetch(`${API_BASE}/favorites/${currentUser.id}`);
           if (favRes.ok) {
             const favs = await favRes.json();
@@ -99,14 +106,24 @@
     function renderRoom(room) {
       document.title = `${room.title} - EasyRoom`;
 
-      // Favorite button top right
+      // Favorite button top right — hide for admin and room owner
       const favBtnWrapper = document.getElementById('favBtnWrapper');
-      favBtnWrapper.innerHTML = `
-        <button id="detailFavBtn" class="btn ${isFavorited ? 'btn-danger' : 'btn-outline-danger'} rounded-pill px-3" onclick="toggleDetailFavorite()">
-          <i class="bi ${isFavorited ? 'bi-heart-fill' : 'bi-heart'} me-1"></i>
-          <span>${isFavorited ? 'Saved in Favorites' : 'Save to Favorites'}</span>
-        </button>
-      `;
+      if (!currentUser) {
+        favBtnWrapper.innerHTML = `
+          <a href="login.html?redirect=room-details.html%3Fid=${roomId}" class="btn btn-outline-danger rounded-pill px-3">
+            <i class="bi bi-heart me-1"></i> <span>Save to Favorites</span>
+          </a>
+        `;
+      } else if (currentUser.isAdmin || currentUser.id == room.user_id) {
+        favBtnWrapper.innerHTML = ''; // Owner / admin: no favorite button
+      } else {
+        favBtnWrapper.innerHTML = `
+          <button id="detailFavBtn" class="btn ${isFavorited ? 'btn-danger' : 'btn-outline-danger'} rounded-pill px-3" onclick="toggleDetailFavorite()">
+            <i class="bi ${isFavorited ? 'bi-heart-fill' : 'bi-heart'} me-1"></i>
+            <span>${isFavorited ? 'Saved in Favorites' : 'Save to Favorites'}</span>
+          </button>
+        `;
+      }
 
       const images = parseImages(room.images);
       const isAvailable = room.status === 'available';
@@ -179,6 +196,9 @@
                 ${room.description || 'No description provided.'}
               </p>
             </div>
+
+            <!-- Reviews Section (populated by loadReviews()) -->
+            <div id="reviewsSection"></div>
           </div>
 
           <!-- Right Column: Price & Owner Contact Card -->
@@ -214,19 +234,57 @@
                 <i class="bi bi-telephone-outbound me-2"></i> Call Owner
               </a>
 
-              <a href="https://wa.me/977${room.contact}" target="_blank" class="btn btn-outline-success btn-lg w-100 rounded-pill" style="color: #10b981; border-color: #10b981;">
+              <a href="https://wa.me/977${room.contact}" target="_blank" class="btn btn-outline-success btn-lg w-100 mb-3 rounded-pill" style="color: #10b981; border-color: #10b981;">
                 <i class="bi bi-whatsapp me-2"></i> WhatsApp Message
               </a>
+
+              ${(!currentUser || currentUser.isAdmin || currentUser.id == room.user_id) ? '' : `
+              <hr style="border-color: #e2e8f0;">
+              <h6 class="fw-bold mb-2"><i class="bi bi-calendar-check me-1 text-primary"></i> Book a Visit</h6>
+              <div id="appointmentSection">
+                <div class="mb-2">
+                  <label class="form-label small fw-semibold">Visit Date</label>
+                  <input type="date" id="apptDate" class="form-control form-control-sm" min="${new Date().toISOString().split('T')[0]}">
+                </div>
+                <div class="mb-2">
+                  <label class="form-label small fw-semibold">Visit Time</label>
+                  <input type="time" id="apptTime" class="form-control form-control-sm">
+                </div>
+                <div class="mb-2">
+                  <label class="form-label small fw-semibold">Message (optional)</label>
+                  <textarea id="apptMessage" class="form-control form-control-sm" rows="2" placeholder="Any message for the owner..."></textarea>
+                </div>
+                <button class="btn btn-primary btn-sm w-100 rounded-pill" onclick="bookAppointment()">
+                  <i class="bi bi-send me-1"></i> Request Appointment
+                </button>
+                <div id="apptAlert" class="mt-2"></div>
+              </div>
+              `}
+
+              <div class="mt-3 text-center">
+                <small class="text-muted"><i class="bi bi-eye me-1"></i><span id="viewCount">--</span> views</small>
+              </div>
             </div>
           </div>
         </div>
       `;
+
+      // Load view count after rendering
+      fetch(`${API_BASE}/rooms/${roomId}/views`)
+        .then(r => r.json())
+        .then(d => {
+          const el = document.getElementById('viewCount');
+          if (el) el.textContent = d.view_count || 0;
+        }).catch(() => {});
+
+      // Load reviews after rendering
+      loadReviews();
     }
 
     async function toggleDetailFavorite() {
-      if (!currentUser) {
-        alert('Please login to save rooms to your favorites!');
-        window.location.href = `login.html?redirect=${encodeURIComponent(window.location.pathname.split('/').pop() + window.location.search)}`;
+      if (!currentUser || currentUser.isAdmin) {
+        alert('Please login as a regular user to save rooms to favorites!');
+        window.location.href = `login.html?redirect=${encodeURIComponent('room-details.html?id=' + roomId)}`;
         return;
       }
 
@@ -241,12 +299,14 @@
         if (res.ok) {
           isFavorited = data.isFavorited;
           const btn = document.getElementById('detailFavBtn');
-          if (isFavorited) {
-            btn.className = 'btn btn-danger rounded-pill px-3';
-            btn.innerHTML = '<i class="bi bi-heart-fill me-1"></i> <span>Saved in Favorites</span>';
-          } else {
-            btn.className = 'btn btn-outline-danger rounded-pill px-3';
-            btn.innerHTML = '<i class="bi bi-heart me-1"></i> <span>Save to Favorites</span>';
+          if (btn) {
+            if (isFavorited) {
+              btn.className = 'btn btn-danger rounded-pill px-3';
+              btn.innerHTML = '<i class="bi bi-heart-fill me-1"></i> <span>Saved in Favorites</span>';
+            } else {
+              btn.className = 'btn btn-outline-danger rounded-pill px-3';
+              btn.innerHTML = '<i class="bi bi-heart me-1"></i> <span>Save to Favorites</span>';
+            }
           }
         } else {
           alert(data.error || 'Failed to toggle favorite');
@@ -254,6 +314,150 @@
       } catch (err) {
         console.error(err);
         alert('Server connection error');
+      }
+    }
+
+    async function bookAppointment() {
+      const date = document.getElementById('apptDate').value;
+      const time = document.getElementById('apptTime').value;
+      const message = document.getElementById('apptMessage').value.trim();
+      const alertDiv = document.getElementById('apptAlert');
+
+      if (!date || !time) {
+        alertDiv.innerHTML = '<div class="alert alert-warning py-1 px-2 small">Please select a date and time.</div>';
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/appointments`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            room_id: roomId,
+            buyer_id: currentUser.id,
+            visit_date: date,
+            visit_time: time,
+            message: message
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          alertDiv.innerHTML = '<div class="alert alert-success py-1 px-2 small">Appointment requested! The owner will be notified.</div>';
+          document.getElementById('apptDate').value = '';
+          document.getElementById('apptTime').value = '';
+          document.getElementById('apptMessage').value = '';
+        } else {
+          alertDiv.innerHTML = `<div class="alert alert-danger py-1 px-2 small">${data.error || 'Failed to book appointment.'}</div>`;
+        }
+      } catch (err) {
+        alertDiv.innerHTML = '<div class="alert alert-danger py-1 px-2 small">Server error. Please try again.</div>';
+      }
+    }
+
+    async function loadReviews() {
+      try {
+        const res = await fetch(`${API_BASE}/reviews/${roomId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        const container = document.getElementById('reviewsSection');
+        if (!container) return;
+
+        const stars = (rating) => '★'.repeat(rating) + '☆'.repeat(5 - rating);
+
+        let reviewsHtml = '';
+        if (data.reviews.length === 0) {
+          reviewsHtml = '<p class="text-muted small">No reviews yet. Be the first to leave one!</p>';
+        } else {
+          reviewsHtml = data.reviews.map(r => `
+            <div class="border rounded-3 p-3 mb-2" style="background:#f8fafc;">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <strong class="small">${r.reviewer_name}</strong>
+                <span style="color:#f59e0b; font-size:0.95rem;">${stars(r.rating)}</span>
+              </div>
+              ${r.comment ? `<p class="mb-0 small text-secondary">${r.comment}</p>` : ''}
+              <small class="text-muted" style="font-size:0.75rem;">${new Date(r.created_at).toLocaleDateString()}</small>
+              ${currentUser && currentUser.id === r.user_id ? `<button class="btn btn-link text-danger p-0 ms-2" style="font-size:0.75rem;" onclick="deleteReview(${r.id})">Delete</button>` : ''}
+            </div>
+          `).join('');
+        }
+
+        const avgHtml = data.avgRating
+          ? `<span style="color:#f59e0b;">★</span> <strong>${data.avgRating}</strong> <span class="text-muted small">(${data.totalReviews} review${data.totalReviews !== 1 ? 's' : ''})</span>`
+          : '';
+
+        container.innerHTML = `
+          <div class="card p-4 shadow-sm border-0 mb-4 rounded-4" style="background-color:#ffffff;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="fw-bold mb-0">Reviews</h5>
+              <span>${avgHtml}</span>
+            </div>
+            <div id="reviewsList">${reviewsHtml}</div>
+            ${currentUser && !currentUser.isAdmin && currentUser.id != roomData?.user_id ? `
+            <hr style="border-color:#e2e8f0;">
+            <h6 class="fw-bold mb-3">Leave a Review</h6>
+            <div class="mb-2">
+              <label class="form-label small fw-semibold">Rating</label>
+              <select id="reviewRating" class="form-select form-select-sm">
+                <option value="5">★★★★★ (5 - Excellent)</option>
+                <option value="4">★★★★☆ (4 - Good)</option>
+                <option value="3">★★★☆☆ (3 - Average)</option>
+                <option value="2">★★☆☆☆ (2 - Poor)</option>
+                <option value="1">★☆☆☆☆ (1 - Terrible)</option>
+              </select>
+            </div>
+            <div class="mb-2">
+              <label class="form-label small fw-semibold">Comment (optional)</label>
+              <textarea id="reviewComment" class="form-control form-control-sm" rows="2" placeholder="Share your experience..."></textarea>
+            </div>
+            <button class="btn btn-primary btn-sm rounded-pill" onclick="submitReview()">
+              <i class="bi bi-star me-1"></i> Submit Review
+            </button>
+            <div id="reviewAlert" class="mt-2"></div>
+            ` : ''}
+          </div>
+        `;
+
+      } catch (err) {
+        console.error('Failed to load reviews:', err);
+      }
+    }
+
+    async function submitReview() {
+      const rating = parseInt(document.getElementById('reviewRating').value);
+      const comment = document.getElementById('reviewComment').value.trim();
+      const alertDiv = document.getElementById('reviewAlert');
+
+      try {
+        const res = await fetch(`${API_BASE}/reviews`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ room_id: roomId, user_id: currentUser.id, rating, comment })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alertDiv.innerHTML = '<div class="alert alert-success py-1 px-2 small">Review submitted!</div>';
+          loadReviews();
+        } else {
+          alertDiv.innerHTML = `<div class="alert alert-danger py-1 px-2 small">${data.error}</div>`;
+        }
+      } catch (err) {
+        alertDiv.innerHTML = '<div class="alert alert-danger py-1 px-2 small">Server error.</div>';
+      }
+    }
+
+    async function deleteReview(reviewId) {
+      if (!confirm('Delete your review?')) return;
+      try {
+        const res = await fetch(`${API_BASE}/reviews/${reviewId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: currentUser.id })
+        });
+        if (res.ok) loadReviews();
+      } catch (err) {
+        console.error(err);
       }
     }
   </script>
