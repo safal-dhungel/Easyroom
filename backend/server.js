@@ -7,6 +7,9 @@ const userRoutes = require('./routes/users');
 const roomRoutes = require('./routes/rooms');
 const favoriteRoutes = require('./routes/favorites');
 const adminRoutes = require('./routes/admin');
+const appointmentRoutes = require('./routes/appointments');
+const reviewRoutes = require('./routes/reviews');
+const notificationRoutes = require('./routes/notifications');
 
 const app = express();
 const PORT = 5000;  
@@ -24,6 +27,9 @@ app.use('/api', userRoutes);
 app.use('/api', roomRoutes);
 app.use('/api', favoriteRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api', appointmentRoutes);
+app.use('/api', reviewRoutes);
+app.use('/api', notificationRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -33,4 +39,3 @@ app.get('/api/health', (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
-

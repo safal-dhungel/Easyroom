@@ -1,5 +1,5 @@
 // routes/rooms.js
-// Handles: List rooms, Get one room, Add room, Edit room, Delete room, Toggle status, My rooms
+// Handles: List rooms, Get one room, Add room, Edit room, Delete room, Toggle status, My rooms, View tracking
 
 const express = require('express');
 const router = express.Router();
@@ -43,6 +43,7 @@ router.get('/rooms', async (req, res) => {
 router.get('/rooms/:id', async (req, res) => {
     try {
         const { id } = req.params;
+        const { viewer_id } = req.query;
 
         // JOIN with users table to get the owner's name
         const [rooms] = await pool.query(`
@@ -56,11 +57,33 @@ router.get('/rooms/:id', async (req, res) => {
             return res.status(404).json({ error: 'Room not found' });
         }
 
+        // Track this room view ONLY if viewer_id is provided, and avoid duplicates
+        if (viewer_id) {
+            pool.query('INSERT IGNORE INTO room_views (room_id, user_id) VALUES (?, ?)', [id, viewer_id]).catch(() => {});
+        }
+
         res.status(200).json(rooms[0]);
 
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Failed to fetch room details' });
+    }
+});
+
+// --- GET ROOM VIEW COUNT ---
+// GET /api/rooms/:id/views
+// Returns the total number of times a room has been viewed
+router.get('/rooms/:id/views', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const [result] = await pool.query(
+            'SELECT COUNT(*) AS view_count FROM room_views WHERE room_id = ?',
+            [id]
+        );
+        res.status(200).json({ view_count: result[0].view_count });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch view count' });
     }
 });
 
