@@ -168,6 +168,17 @@ Stores rooms saved by users.
 
 ---
 
+## 🖼️ How Images Are Handled and Saved
+
+EasyRoom handles image uploads without using a traditional file storage service (like AWS S3 or Cloudinary) or storing files directly on the server's hard drive. Instead, images are stored directly in the database.
+
+1. **Frontend Processing**: When a user selects images to upload, the browser uses the JavaScript `FileReader` API (`readAsDataURL()`) to convert each image file into a Base64 encoded string.
+2. **Payload**: The Base64 string representations of the images are collected into an array and sent to the backend in the JSON body of the `POST /api/rooms` request.
+3. **Backend Storage**: The Express backend uses `JSON.stringify()` to turn this array of Base64 strings into a single JSON string. It then saves this string in the MySQL database inside the `images` column of the `rooms` table.
+4. **Database Design**: The `images` column is defined as `LONGTEXT` to accommodate the large amount of characters produced by Base64 encoding.
+
+---
+
 ## 💡 Key Terms Explained for Beginners
 
 - **HTML5**: Defines the structure of the web pages.

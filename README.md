@@ -1,30 +1,6 @@
-# EasyRoom 🏠
+# EasyRoom 🏠 - Developer Guide
 
-A simple room rental web application built with **HTML, Bootstrap 5, Express.js, and MySQL**. EasyRoom allows users to post, browse, and find rental rooms easily.
-
----
-
-## Features
-
-### For Buyers (Renters)
-- 🔍 Browse and search available rooms by location and max price
-- ❤️ Save rooms to favorites for quick access later
-- 📅 **Request a visit appointment** for any room listing
-- ⭐ Leave a star rating and review for rooms
-- 🔔 Receive in-app notifications when appointments are accepted/rejected
-
-### For Sellers (Room Owners)
-- ➕ Post room listings with up to 5 photos
-- ✏️ Edit and delete your own listings
-- 🔄 Toggle room status between **Available** and **Rented**
-- 📬 Receive appointment requests from buyers
-- ✅ Accept or ❌ Reject visit appointments
-- 👁️ See how many times your room listing has been viewed
-
-### General
-- 👤 User registration and login (with bcrypt-hashed passwords)
-- 🧑‍💼 Admin panel to manage all users and rooms
-- 📱 Responsive design (works on mobile, tablet, and desktop)
+This repository contains the source code for EasyRoom, a room rental web application.
 
 ---
 
@@ -133,7 +109,6 @@ EasyRoom/
 | Email    | admin@gmail.com   |
 | Password | 12345678          |
 
-> ⚠️ Change this password in production!
 
 ---
 
@@ -194,9 +169,3 @@ EasyRoom/
 | DELETE | /api/admin/users/:id    | Delete a user            |
 | GET    | /api/admin/rooms        | Get all rooms            |
 | DELETE | /api/admin/rooms/:id    | Delete any room          |
-
----
-
-## Built By
-
-This is a school project demonstrating a full-stack web application using beginner-friendly technologies: plain HTML/CSS/JS on the frontend and Express + MySQL on the backend — no frontend frameworks needed.
